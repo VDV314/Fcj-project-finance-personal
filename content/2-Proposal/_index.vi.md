@@ -50,7 +50,7 @@ Nền tảng sử dụng kiến trúc AWS Serverless để quản lý dữ liệ
 
 ### 4. Triển khai kỹ thuật  
 *Các giai đoạn triển khai*  
-Dự án gồm 2 phần — thiết lập trạm thời tiết biên và xây dựng nền tảng thời tiết — mỗi phần trải qua 4 giai đoạn:  
+Dự án gồm 4 giai đoạn:  
 1. *Nghiên cứu và vẽ kiến trúc*: Phân tích yêu cầu quản lý thu chi, phân loại theo danh mục, báo cáo.  
 2. *Tính toán chi phí và kiểm tra tính khả thi*: Sử dụng AWS Pricing Calculator để ước tính và điều chỉnh.  
 3. *Điều chỉnh kiến trúc để tối ưu chi phí/giải pháp*: Tối ưu Lambda function,Tối ưu DynamoDB query patterns.  

@@ -45,7 +45,7 @@ The platform uses AWS Serverless architecture to manage personal financial data 
 
 ### 4. Technical Implementation
 *Implementation Phases*  
-The project consists of 2 parts — setting up the edge weather station and building the weather platform — each part goes through 4 phases:
+The project consists of 4 phases:
 1. *Research and Draw Architecture*: Analyze requirements for income/expense management, categorization, reporting.
 2. *Cost Calculation and Feasibility Check*: Use AWS Pricing Calculator to estimate and adjust.
 3. *Adjust Architecture to Optimize Cost/Solution*: Optimize Lambda functions, Optimize DynamoDB query patterns.
