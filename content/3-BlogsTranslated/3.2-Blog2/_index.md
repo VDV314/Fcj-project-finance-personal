@@ -7,118 +7,113 @@ pre: " <b> 3.2. </b> "
 ---
 
 
-# Getting Started with Healthcare Data Lakes: Using Microservices
+# How Stellantis streamlines floating license management with serverless orchestration on AWS
 
-Data lakes can help hospitals and healthcare facilities turn data into business insights, maintain business continuity, and protect patient privacy. A **data lake** is a centralized, managed, and secure repository to store all your data, both in its raw and processed forms for analysis. Data lakes allow you to break down data silos and combine different types of analytics to gain insights and make better business decisions.
+*by Göksel SARIKAYA and Milosz Stawarski on 12 JUN 2025*
 
-This blog post is part of a larger series on getting started with setting up a healthcare data lake. In my final post of the series, *“Getting Started with Healthcare Data Lakes: Diving into Amazon Cognito”*, I focused on the specifics of using Amazon Cognito and Attribute Based Access Control (ABAC) to authenticate and authorize users in the healthcare data lake solution. In this blog, I detail how the solution evolved at a foundational level, including the design decisions I made and the additional features used. You can access the code samples for the solution in this Git repo for reference.
+This post is written by Goeksel Sarikaya, Senior Delivery Consultant at AWS, and Milosz Stawarski, Senior Software Architect at Stellantis.
 
----
+Software licensing is a critical aspect of many organizations' operations, with various models available to suit different needs. Two common types are named user licenses, which are assigned to specific individuals, and floating licenses, which can be shared among a pool of users. Some independent software vendors (ISVs) offer both options, whereas others might have limitations, particularly in cloud environments.
 
-## Architecture Guidance
+In this post, we explore a unique scenario where an ISV, unable to provide a floating license option for cloud usage, worked with Stellantis to develop an alternative solution. This approach, implemented with the ISV's permission, treats named user licenses as if they were floating, automatically assigning and removing them based on the state of user workbench instances.
 
-The main change since the last presentation of the overall architecture is the decomposition of a single service into a set of smaller services to improve maintainability and flexibility. Integrating a large volume of diverse healthcare data often requires specialized connectors for each format; by keeping them encapsulated separately as microservices, we can add, remove, and modify each connector without affecting the others. The microservices are loosely coupled via publish/subscribe messaging centered in what I call the “pub/sub hub.”
-
-This solution represents what I would consider another reasonable sprint iteration from my last post. The scope is still limited to the ingestion and basic parsing of **HL7v2 messages** formatted in **Encoding Rules 7 (ER7)** through a REST interface.
-
-**The solution architecture is now as follows:**
-
-> *Figure 1. Overall architecture; colored boxes represent distinct services.*
+This solution is not intended to circumvent licensing terms or reduce costs at the expense of ISVs. Rather, it's a collaborative approach to address specific customer needs when traditional floating licenses aren't available. We will demonstrate how the solution uses serverless AWS services like Amazon EventBridge, AWS Lambda, Amazon DynamoDB, and AWS Systems Manager, keeping in mind that any similar implementation should only be pursued with explicit permission from the software vendor.
 
 ---
 
-While the term *microservices* has some inherent ambiguity, certain traits are common:  
-- Small, autonomous, loosely coupled  
-- Reusable, communicating through well-defined interfaces  
-- Specialized to do one thing well  
-- Often implemented in an **event-driven architecture**
+## Overview of Stellantis
 
-When determining where to draw boundaries between microservices, consider:  
-- **Intrinsic**: technology used, performance, reliability, scalability  
-- **Extrinsic**: dependent functionality, rate of change, reusability  
-- **Human**: team ownership, managing *cognitive load*
+Stellantis N.V., born from the merger of FCA and PSA Group, leads the change towards software defined vehicles (SDV). As part of this transformation, AWS and Stellantis created the Virtual Engineering Workbench (VEW), a modular framework to develop, integrate, and test vehicle software in the cloud, ultimately connecting their vehicles to the cloud.
+
+The VEW provides predefined environments tailored to specific use cases. These environments come fully equipped with the tools, integrated development environments (IDEs), and licensing necessary for developers to jumpstart their projects.
+
+For more details on VEW, refer to Stellantis' SDV transformation with the Virtual Engineering Workbench on AWS.
 
 ---
 
-## Technology Choices and Communication Scope
+## Overview of solution
 
-| Communication scope                       | Technologies / patterns to consider                                                        |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Within a single microservice              | Amazon Simple Queue Service (Amazon SQS), AWS Step Functions                               |
-| Between microservices in a single service | AWS CloudFormation cross-stack references, Amazon Simple Notification Service (Amazon SNS) |
-| Between services                          | Amazon EventBridge, AWS Cloud Map, Amazon API Gateway                                      |
+As the number of developers and projects grew, Stellantis faced a challenge in managing the limited number of named user licenses for their software tools. The manual process of assigning and revoking licenses became increasingly time-consuming and inefficient, potentially hindering the agility and productivity of their development teams.
 
----
+Stellantis and AWS tackled this challenge head-on by collaborating on an innovative, dynamic license management solution using AWS serverless services. This solution transforms the traditional named user license model into a more flexible floating license system, automatically assigning and revoking licenses based on the state of user workbench instances. The licenses and solution discussed in this post pertain solely to the use of standalone software tools such as those used in automotive domains. These do not involve sharing of user data or content when licenses are reused.
 
-## The Pub/Sub Hub
+Before we dive into the detailed workflow of the solution, let's examine the high-level architecture. The following diagram illustrates how various AWS services work together to create this efficient license management system.
 
-Using a **hub-and-spoke** architecture (or message broker) works well with a small number of tightly related microservices.  
-- Each microservice depends only on the *hub*  
-- Inter-microservice connections are limited to the contents of the published message  
-- Reduces the number of synchronous calls since pub/sub is a one-way asynchronous *push*
+![blog2 Architecture](/images/3-Blog/Architecture-blog2.png)
 
-Drawback: **coordination and monitoring** are needed to avoid microservices processing the wrong message.
+## Architecture 
+This architecture uses key AWS services such as EventBridge, Lambda, DynamoDB, and Systems Manager to create a scalable, serverless solution that significantly reduces administrative overhead and optimizes license utilization.
+
+In the following sections, we explore each component of this architecture in detail, explaining how they interact to provide a seamless license management experience for Stellantis' VEW.
 
 ---
 
-## Core Microservice
+## In workbench accounts (user accounts)
 
-Provides foundational data and communication layer, including:  
-- **Amazon S3** bucket for data  
-- **Amazon DynamoDB** for data catalog  
-- **AWS Lambda** to write messages into the data lake and catalog  
-- **Amazon SNS** topic as the *hub*  
-- **Amazon S3** bucket for artifacts such as Lambda code
+The design is serverless and based on an event-driven approach. The workflow in the user accounts is as follows:
 
-> Only allow indirect write access to the data lake through a Lambda function → ensures consistency.
+1. Workbench instances are Amazon Elastic Compute Cloud (Amazon EC2). Their start and stop automatically sends AWS events.
 
----
+2. An EventBridge rule invokes a Lambda function when such an event occurs. This function checks the tags on the EC2 instance to distinguish workbenches from other EC2 instances. Two tags are important for identifying workbench instances: `vew:workbench:ownerId` and `vew:workbench:type`.
 
-## Front Door Microservice
+3. The Lambda function creates a custom event with the following data: `user-id`, `workbench-type`, `workbench-state`, and `instance-id`, and sends this event to the default event bus.
 
-- Provides an API Gateway for external REST interaction  
-- Authentication & authorization based on **OIDC** via **Amazon Cognito**  
-- Self-managed *deduplication* mechanism using DynamoDB instead of SNS FIFO because:  
-  1. SNS deduplication TTL is only 5 minutes  
-  2. SNS FIFO requires SQS FIFO  
-  3. Ability to proactively notify the sender that the message is a duplicate  
+4. An EventBridge rule forwards the custom event to a custom event bus in the license server account.
 
 ---
 
-## Staging ER7 Microservice
+## In license server account
 
-- Lambda “trigger” subscribed to the pub/sub hub, filtering messages by attribute  
-- Step Functions Express Workflow to convert ER7 → JSON  
-- Two Lambdas:  
-  1. Fix ER7 formatting (newline, carriage return)  
-  2. Parsing logic  
-- Result or error is pushed back into the pub/sub hub  
+The following steps take place in the license server account:
+
+1. An EventBridge rule invokes a Lambda function.
+
+2. This function interacts with a DynamoDB table that stores a mapping of licensed products to users. The function does the following:
+   - Deduces the licensed products present in the workbench from the workbench type.
+   - For each licensed product, it verifies if the combination of product and user is already present in the DynamoDB table.
+   - If the workbench is starting:
+     - If the combination is already present, it increases the count of workbenches in the table for this item by 1.
+     - If the combination is not present, it creates a new item in the table (product, user-id, workbench-count, timestamp).
+   - If the workbench is stopping, it decreases the count of workbenches in the table for this item by 1. If the count becomes 0, the item is deleted.
+
+3. Any update to the DynamoDB table triggers another Lambda function.
+
+4. If the change in the table is a creation of a new entry or deletion of an entry, this function writes the current timestamp to a Systems Manager parameter in both cases. This is so that if no changes are detected in the database, we don't unnecessarily run the xLC (License Client for related product) caller function.
+
+5. Another Lambda function is invoked every minute. It compares the timestamp written in the Systems Manager parameter indicating a DynamoDB item creation or deletion with the last time the function called the xLC CLI to assign users to a license.
+
+6. If the DynamoDB timestamp is earlier, the function stops. If the DynamoDB timestamp is later, the function queries the table for obtaining the user-id for each product.
+
+7. To maintain a comprehensive record of license assignment operations, you can enable data plane events for DynamoDB in AWS CloudTrail.
+
+8. For each licensed product, the function uses Run Command, a capability of Systems Manager, to invoke the xLC CLI API on the license server to assign named users to a license for a product. The function provides the list of users assigned to the product to the API. This updates the named user list on the license server—the list is completely overwritten, which includes adding new user IDs and removing ones that are no longer needed.
 
 ---
 
-## New Features in the Solution
+## Benefits and key features
 
-### 1. AWS CloudFormation Cross-Stack References
-Example *outputs* in the core microservice:
-```yaml
-Outputs:
-  Bucket:
-    Value: !Ref Bucket
-    Export:
-      Name: !Sub ${AWS::StackName}-Bucket
-  ArtifactBucket:
-    Value: !Ref ArtifactBucket
-    Export:
-      Name: !Sub ${AWS::StackName}-ArtifactBucket
-  Topic:
-    Value: !Ref Topic
-    Export:
-      Name: !Sub ${AWS::StackName}-Topic
-  Catalog:
-    Value: !Ref Catalog
-    Export:
-      Name: !Sub ${AWS::StackName}-Catalog
-  CatalogArn:
-    Value: !GetAtt Catalog.Arn
-    Export:
-      Name: !Sub ${AWS::StackName}-CatalogArn
+The solution offers the following benefits:
+
+- **Automated license assignment and removal** – Users are automatically assigned licenses when their workbench instances start, and licenses are returned to the pool when instances stop, providing efficient license utilization.
+
+- **Scalable and serverless architecture** – The solution is built on serverless AWS services, allowing it to scale seamlessly as the number of users and workbench instances grows, without the need for provisioning or managing servers.
+
+- **Centralized license management** – The license server account acts as a central hub for managing licenses across multiple workbench accounts, simplifying administration and providing a unified view of license usage.
+
+- **Reduced administrative overhead** – By automating the license assignment and removal process, the solution can significantly reduce the administrative burden associated with manual license management.
+
+- **Optimized license utilization** – Licenses are assigned only when needed and returned to the pool when no longer required, maximizing license availability and minimizing idle licenses.
+
+- **Monitoring and metrics** – The solution provides monitoring capabilities and license usage metrics, enabling better visibility and informed decision-making regarding license procurement and allocation.
+
+---
+
+## Conclusion
+
+By implementing this serverless solution, it is possible to transform a manual named user license management systems to an automated floating license system for software tools. The event-driven architecture and serverless components provide efficient and scalable license assignment and removal based on the workbench instance state.
+
+This solution has streamlined the license management process, reducing administrative overhead and optimizing license utilization. It is now possible to provision software tools more efficiently, improving productivity and resource allocation across the organization. Additionally, the centralized license management and monitoring capabilities provide better visibility and control over license usage, enabling informed decision-making and cost optimization.
+
+Overall, this AWS based floating license solution has empowered organizations to use software tools more effectively, while minimizing the operational burden associated with license management. For more serverless learning resources, visit Serverless Land.
+
+---
