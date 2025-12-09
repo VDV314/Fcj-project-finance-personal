@@ -7,25 +7,42 @@ pre: " <b> 5. </b> "
 ---
 
 
+# Workshop: Xây dựng Ứng dụng Finance Tracker với AWS Serverless
 
+## Tổng quan
 
-# Đảm bảo truy cập Hybrid an toàn đến S3 bằng cách sử dụng VPC endpoint
+Trong workshop này, bạn sẽ học cách xây dựng một ứng dụng web serverless hoàn chỉnh để quản lý tài chính cá nhân sử dụng các dịch vụ AWS. Ứng dụng **Finance Tracker** cho phép người dùng theo dõi chi tiêu, quản lý ngân sách hàng tháng, và xem các thống kê tài chính - tất cả đều được triển khai trên kiến trúc serverless của AWS.
 
-#### Tổng quan
+## Kiến trúc Workshop
 
-**AWS PrivateLink** cung cấp kết nối riêng tư đến các dịch vụ aws từ VPCs hoặc trung tâm dữ liệu (on-premise) mà không làm lộ lưu lượng truy cập ra ngoài public internet.
+![Architecture Diagram](/images/2-Proposal/architectural.png)
 
-Trong bài lab này, chúng ta sẽ học cách tạo, cấu hình, và kiểm tra VPC endpoints để cho phép workload của bạn tiếp cận các dịch vụ AWS mà không cần đi qua Internet công cộng.
+Workshop sử dụng kiến trúc serverless với các thành phần chính:
 
-Chúng ta sẽ tạo hai loại endpoints để truy cập đến Amazon S3: gateway vpc endpoint và interface vpc endpoint. Hai loại vpc endpoints này mang đến nhiều lợi ích tùy thuộc vào việc bạn truy cập đến S3 từ môi trường cloud hay từ trung tâm dữ liệu (on-premise).
-+ **Gateway** - Tạo gateway endpoint để gửi lưu lượng đến Amazon S3 hoặc DynamoDB using private IP addresses. Bạn điều hướng lưu lượng từ VPC của bạn đến gateway endpoint bằng các bảng định tuyến (route tables)
-+ **Interface** - Tạo interface endpoint để gửi lưu lượng đến các dịch vụ điểm cuối (endpoints) sử dụng Network Load Balancer để phân phối lưu lượng. Lưu lượng dành cho dịch vụ điểm cuối được resolved bằng DNS.
+- **Frontend**: Ứng dụng được host trên AWS Amplify
+- **API Layer**: Amazon API Gateway để expose REST API endpoints
+- **Business Logic**: AWS Lambda function xử lý nghiệp vụ
+- **Data Storage**: Amazon DynamoDB lưu trữ dữ liệu chi tiêu và ngân sách
+- **Security**: AWS IAM quản lý quyền truy cập giữa các dịch vụ
+
+## Mục tiêu Workshop
+
+Sau khi hoàn thành workshop này, bạn sẽ:
+
+✅ Hiểu cách thiết kế và triển khai ứng dụng serverless trên AWS  
+✅ Tạo và cấu hình DynamoDB tables để lưu trữ dữ liệu NoSQL  
+✅ Viết và triển khai AWS Lambda function bằng Python  
+✅ Tạo REST API với Amazon API Gateway  
+✅ Tích hợp API Gateway với Lambda function  
+✅ Triển khai ứng dụng React lên AWS Amplify với CI/CD  
+✅ Cấu hình IAM roles và policies cho bảo mật  
+✅ Xử lý CORS cho ứng dụng web  
+
 
 #### Nội dung
 
 1. [Tổng quan về workshop](5.1-Workshop-overview/)
 2. [Chuẩn bị](5.2-Prerequiste/)
-3. [Truy cập đến S3 từ VPC](5.3-S3-vpc/)
-4. [Truy cập đến S3 từ TTDL On-premises](5.4-S3-onprem/)
-5. [VPC Endpoint Policies (làm thêm)](5.5-Policy/)
-6. [Dọn dẹp tài nguyên](5.6-Cleanup/)
+3. [Truy cập đến S3 từ VPC](5.3-API-Gateway/)
+4. [Truy cập đến S3 từ TTDL On-premises](5.4-Lambda/)
+5. [VPC Endpoint Policies (làm thêm)](5.5-Amplify/)

@@ -6,14 +6,81 @@ chapter : false
 pre : " <b> 5.1. </b> "
 ---
 
-#### Giới thiệu về VPC Endpoint
+# Workshop Finance Tracker - Giới thiệu
 
-+ Điểm cuối VPC (endpoint) là thiết bị ảo. Chúng là các thành phần VPC có thể mở rộng theo chiều ngang, dự phòng và có tính sẵn sàng cao. Chúng cho phép giao tiếp giữa tài nguyên điện toán của bạn và dịch vụ AWS mà không gây ra rủi ro về tính sẵn sàng.
-+ Tài nguyên điện toán đang chạy trong VPC có thể truy cập Amazon S3 bằng cách sử dụng điểm cuối Gateway. Interface Endpoint  PrivateLink có thể được sử dụng bởi tài nguyên chạy trong VPC hoặc tại TTDL.
+## Tổng quan
 
-#### Tổng quan về workshop
-Trong workshop này, bạn sẽ sử dụng hai VPC.
-+ **"VPC Cloud"** dành cho các tài nguyên cloud như Gateway endpoint và EC2 instance để kiểm tra.
-+ **"VPC On-Prem"** mô phỏng môi trường truyền thống như nhà máy hoặc trung tâm dữ liệu của công ty. Một EC2 Instance chạy phần mềm StrongSwan VPN đã được triển khai trong "VPC On-prem" và được cấu hình tự động để thiết lập đường hầm VPN Site-to-Site với AWS Transit Gateway. VPN này mô phỏng kết nối từ một vị trí tại TTDL (on-prem) với AWS cloud. Để giảm thiểu chi phí, chỉ một phiên bản VPN được cung cấp để hỗ trợ workshop này. Khi lập kế hoạch kết nối VPN cho production workloads của bạn, AWS khuyên bạn nên sử dụng nhiều thiết bị VPN để có tính sẵn sàng cao.
+Chào mừng bạn đến với **Workshop Finance Tracker**! Trong workshop thực hành này, bạn sẽ xây dựng một ứng dụng web serverless hoàn chỉnh để theo dõi tài chính cá nhân bằng các dịch vụ AWS. Ứng dụng này minh họa các phương pháp phát triển cloud-native hiện đại và thể hiện sức mạnh của công nghệ serverless của AWS.
 
-![overview](/images/5-Workshop/5.1-Workshop-overview/diagram1.png)
+## Finance Tracker là gì?
+
+Finance Tracker là một ứng dụng web giúp người dùng quản lý tài chính cá nhân thông qua:
+
+- 💰 **Theo dõi Chi tiêu**: Ghi lại và phân loại chi tiêu hàng ngày
+- 📊 **Quản lý Ngân sách**: Đặt giới hạn ngân sách hàng tháng và theo dõi chi tiêu so với mục tiêu
+- 📈 **Thông tin Tài chính**: Xem các mẫu chi tiêu và mức sử dụng ngân sách
+- 🔒 **Lưu trữ An toàn**: Lưu trữ dữ liệu tài chính một cách an toàn trên đám mây
+
+## Tại sao chọn Kiến trúc Serverless?
+
+Workshop này sử dụng **kiến trúc serverless** mang lại nhiều lợi ích:
+
+### Lợi ích chính:
+
+**Không cần Quản lý Máy chủ**
+- AWS quản lý toàn bộ hạ tầng
+- Không cần cung cấp, mở rộng hoặc bảo trì máy chủ
+- Tập trung vào logic ứng dụng thay vì hạ tầng
+
+**Tự động Mở rộng**
+- Tự động mở rộng theo nhu cầu
+- Xử lý lưu lượng tăng đột biến mà không cần can thiệp thủ công
+- Đảm bảo hiệu suất ổn định
+
+**Tiết kiệm Chi phí**
+- Chỉ trả tiền cho những gì bạn sử dụng
+- Không có chi phí cho tài nguyên nhàn rỗi
+- Hoàn hảo cho khối lượng công việc biến đổi
+
+**Tính Sẵn sàng Cao**
+- Khả năng dự phòng và chịu lỗi tích hợp sẵn
+- AWS xử lý độ tin cậy của hạ tầng
+- Triển khai đa AZ theo mặc định
+
+**Phát triển Nhanh hơn**
+- Giảm chi phí vận hành
+- Thời gian đưa ra thị trường nhanh hơn
+- Tập trung vào giá trị kinh doanh
+
+## Công nghệ Bạn sẽ Sử dụng
+
+### Dịch vụ AWS:
+
+| Dịch vụ | Mục đích | Tại sao sử dụng |
+|---------|---------|---------------|
+| **Amazon DynamoDB** | Cơ sở dữ liệu NoSQL | Lưu trữ dữ liệu nhanh, linh hoạt cho chi tiêu và ngân sách |
+| **AWS Lambda** | Serverless Compute | Thực thi logic nghiệp vụ mà không cần quản lý máy chủ |
+| **Amazon API Gateway** | Quản lý API | Tạo và quản lý RESTful API |
+| **AWS Amplify** | Lưu trữ Frontend | Triển khai và lưu trữ ứng dụng React với CI/CD |
+| **AWS IAM** | Bảo mật & Kiểm soát Truy cập | Quản lý quyền giữa các dịch vụ |
+
+### Công nghệ Frontend:
+
+- **React.js** - Thư viện JavaScript hiện đại để xây dựng giao diện người dùng
+- **JavaScript (ES6+)** - Ngôn ngữ lập trình cho logic frontend
+- **HTML5 & CSS3** - Cấu trúc và định dạng
+
+### Công nghệ Backend:
+
+- **Python 3.14** - Ngôn ngữ lập trình cho hàm Lambda
+- **Boto3** - AWS SDK cho Python
+- **REST API** - Giao thức giao tiếp giữa frontend và backend
+
+### Luồng Dữ liệu:
+
+1. **Tương tác Người dùng**: Người dùng nhập dữ liệu chi tiêu hoặc ngân sách trong giao diện
+2. **Yêu cầu API**: Frontend gửi yêu cầu HTTPS đến API Gateway
+3. **Thực thi Lambda**: API Gateway kích hoạt hàm Lambda
+4. **Xử lý Dữ liệu**: Lambda xác thực và xử lý dữ liệu
+5. **Thao tác Cơ sở dữ liệu**: Lambda đọc/ghi dữ liệu vào DynamoDB
+6. **Phản hồi**: Kết quả được trả về frontend và hiển thị cho người dùng
